@@ -1,0 +1,82 @@
+
+% Precompute a 3D magnetic field map (Bx,By,Bz) of the coaxial solenoids
+% and save it to a .mat file for later use in Simulink.
+clear; clc;
+mu0 = 4*pi*1e-7; % permeability of free space (H/m)
+I = 1; % current per turn (A)
+% Geometry of inner solenoid
+Ri = 0.05; Li = 0.10; Ni = 10;
+% Geometry of outer solenoid
+Ro = 0.10; Lo = 0.10; No = 10;
+% Numerical settings
+Nseg = 100; % segments per loop (>= 80 recommended)
+Nx = 25; Ny = 25; Nz = 25; % grid resolution in x,y,z
+% Define the 3D grid where we want B(x,y,z)
+x_vals = linspace(-Ro*1.2, Ro*1.2, Nx);
+y_vals = linspace(-Ro*1.2, Ro*1.2, Ny);
+z_vals = linspace(-Lo*0.7, Lo*0.7, Nz);
+Bx_map = zeros(Nx,Ny,Nz);
+By_map = zeros(Nx,Ny,Nz);
+Bz_map = zeros(Nx,Ny,Nz);
+% Precompute z positions of each turn
+z_inner = linspace(-Li/2, Li/2, Ni);
+z_outer = linspace(-Lo/2, Lo/2, No);
+
+% Helper handle: field of a single loop
+
+loopB = @(R, z0, r_obs) localLoopField(mu0, I, R, z0, r_obs, Nseg);
+
+% Build the full 3D field map
+
+for ix = 1:Nx
+  for iy = 1:Ny
+     for iz = 1:Nz
+        r_obs = [ x_vals(ix), y_vals(iy), z_vals(iz) ];
+        B = [0 0 0];
+% Inner solenoid
+        for z0 = z_inner
+           B = B + loopB(Ri, z0, r_obs);
+        end
+% Outer solenoid
+        for z0 = z_outer
+           B = B + loopB(Ro, z0, r_obs);
+        end
+        Bx_map(ix,iy,iz) = B(1);
+        By_map(ix,iy,iz) = B(2);
+        Bz_map(ix,iy,iz) = B(3);
+     end
+  end
+end
+% Save everything needed for the plume simulation
+save('HIT_fieldMap3D.mat', ...
+'x_vals','y_vals','z_vals', ...
+'Bx_map','By_map','Bz_map', ...
+'Ri','Ro','Li','Lo','Ni','No', ...
+'I','mu0','Nseg');
+disp('Saved 3D field map to HIT_fieldMap3D.mat');
+
+% Local function used by the anonymous handle above
+
+function B = localLoopField(mu0, I, R, z0, r_obs, Nseg)
+% localLoopField Same idea as biotSavartLoop, but kept local
+% so FieldGenerator3D.m can be a single file if you want.
+theta = linspace(0, 2*pi, Nseg+1);
+theta(end) = [];
+xw = R*cos(theta);
+yw = R*sin(theta);
+zw = z0 * ones(size(theta));
+dtheta = 2*pi/Nseg;
+dlx = -R*sin(theta) * dtheta;
+dly = R*cos(theta) * dtheta;
+dlz = zeros(size(theta));
+dl = [dlx' dly' dlz'];
+B = [0 0 0];
+for k = 1:Nseg
+   r_src = [xw(k), yw(k), zw(k)];
+   R_vec = r_obs - r_src;
+   R_mag = norm(R_vec);
+   if R_mag > 1e-9
+      B = B + (mu0/(4*pi))*I * cross(dl(k,:), R_vec) / (R_mag^3);
+   end
+end
+end
