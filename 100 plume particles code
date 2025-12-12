@@ -1,0 +1,33 @@
+
+N_particles = 100; % how many particles to draw
+plumeRadius = 0.02; % how wide the cloud is (m)
+sphereRadius = 0.001; % radius of each particle sphere (m)
+z_position = 0.075; % fixed z position for the cloud (m)
+outputFile = 'plume_100.wrl';
+
+fid = fopen(outputFile,'w'); % code will be saved in a document(notepad)
+fprintf(fid,'#VRML V2.0 utf8\n\n');
+for i = 1:N_particles
+% Random position in a square of side = plumeRadius
+   x = (rand - 0.5)*plumeRadius;
+   y = (rand - 0.5)*plumeRadius;
+   z = z_position;
+% Each particle is a small yellow, semitransparent sphere
+   fprintf(fid,'Transform {\n');
+   fprintf(fid,' translation %f %f %f\n', x, y, z);
+   fprintf(fid,' children [\n');
+   fprintf(fid,' Shape {\n');
+   fprintf(fid,' appearance Appearance {\n');
+   fprintf(fid,' material Material {\n');
+   fprintf(fid,' diffuseColor 1 1 0\n');
+   fprintf(fid,' emissiveColor 1 1 0\n');
+   fprintf(fid,' transparency 0.4\n');
+   fprintf(fid,' }\n');
+   fprintf(fid,' }\n');
+   fprintf(fid,' geometry Sphere { radius %f }\n', sphereRadius);
+   fprintf(fid,' }\n');
+   fprintf(fid,' ]\n');
+   fprintf(fid,'}\n\n');
+end
+fclose(fid);
+disp(['Saved plume file: ', outputFile]);
