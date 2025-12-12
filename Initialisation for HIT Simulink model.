@@ -1,0 +1,54 @@
+
+% Initialise workspace variables for the Hall-effect thruster plume model.
+% Run this script *before* starting the Simulink model.
+clear; clc;
+% Load precomputed magnetic field map if it is not already in memory
+if ~exist('Bx_map','var')
+   load('HIT_fieldMap3D.mat');
+end
+% ----------------- Physical constants -----------------
+q_e = 1.602176634e-19; % elementary charge (C)
+amu = 1.66053906660e-27; % atomic mass unit (kg)
+m_xe = 131 * amu; % mass of Xe+ ion ~ 131 amu (kg)
+qm = q_e / m_xe; % charge-to-mass ratio (C/kg)
+% ----------------- Particle initialisation -------------
+N = 100; % number of simulation particles
+% Nozzle exit plane is taken as z = 0.
+% We emit particles from a small circular disk of radius r_emit.
+r_emit = 0.02; % emission radius (m)
+theta = 2*pi*rand(N,1); % random angle around axis
+rad = r_emit*sqrt(rand(N,1)); % radial position (gives uniform disk)
+% Initial positions X0 = [x0 y0 z0]
+X0 = [ ...
+rad .* cos(theta), ...
+rad .* sin(theta), ...
+zeros(N,1) ...
+];
+% Initial velocities
+vz0 = 12000; % main axial speed (m/s), ~ 12 km/s
+vx0 = zeros(N,1); % allow you to add spreads later if needed
+vy0 = zeros(N,1);
+V0 = [vx0, vy0, vz0*ones(N,1)];
+% ----------------- Time settings -----------------------
+t_end = 5e-3; % total simulation time (s)
+% Choose solver: e.g. variable-step ode23t/ode45 in Simulink
+% with MaxStep around 1e-4 s.
+% ----------------- Electric field (for later) ----------
+% For now we keep E = 0 everywhere. Replace this with a more realistic field model later.
+Econst = [0 0 0]; % [Ex Ey Ez] in V/m
+% ----------------- Export to base workspace -------------
+assignin('base','x_vals',x_vals);
+assignin('base','y_vals',y_vals);
+assignin('base','z_vals',z_vals);
+assignin('base','Bx_map',Bx_map);
+assignin('base','By_map',By_map);
+assignin('base','Bz_map',Bz_map);
+assignin('base','X0',X0);
+assignin('base','V0',V0);
+assignin('base','N',N);
+assignin('base','qm',qm);
+assignin('base','Econst',Econst);
+assignin('base','t_end',t_end);
+disp('initHIT: variables sent to base workspace.');
+
+
