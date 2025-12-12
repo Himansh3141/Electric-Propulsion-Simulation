@@ -1,0 +1,36 @@
+
+function B = biotSavartLoop(mu0, I, R, z_loop, r_obs, Nseg)
+% biotSavartLoop Magnetic field of a circular loop at an arbitrary point.
+% B = biotSavartLoop(mu0, I, R, z_loop, r_obs, Nseg)
+% I - current in the loop (A)
+% R - loop radius (m)
+% z_loop - z position of the loop centre (m)
+% r_obs - 1x3 vector [x y z] for observation point (m)
+% Nseg - number of straight segments used to approximate the loop
+% B - 1x3 vector [Bx By Bz] (Tesla)
+% Angles of each segment
+
+theta = linspace(0, 2*pi, Nseg+1);
+theta(end) = []; % remove duplicate 2*pi point
+% Coordinates of wire segments (lying in xy-plane at z = z_loop)
+xw = R*cos(theta);
+yw = R*sin(theta);
+zw = z_loop * ones(size(theta));
+% Small length vectors dl along the loop
+dtheta = 2*pi/Nseg;
+dlx = -R*sin(theta) * dtheta;
+dly = R*cos(theta) * dtheta;
+dlz = zeros(size(theta));
+dl = [dlx' dly' dlz'];
+% Initialise field
+B = [0 0 0];
+for k = 1:Nseg
+   r_src = [xw(k), yw(k), zw(k)]; % position of current element
+   R_vec = r_obs - r_src; % vector from element to observer
+   R_mag = norm(R_vec); % distance
+   if R_mag > 1e-9 % avoid division by zero
+      dB = (mu0/(4*pi)) * I * cross(dl(k,:), R_vec) / (R_mag^3);
+      B = B + dB;
+   end
+end
+end
