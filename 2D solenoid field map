@@ -1,0 +1,70 @@
+
+% Compute magnetic field (Br,Bz) in an r-z plane for two coaxial solenoids
+% using the Biot-Savart law and discrete circular loops.
+clear; clc;
+mu0 = 4*pi*1e-7; % permeability of free space (H/m)
+I = 1; % current per turn (A)
+% Inner solenoid geometry
+Ri = 0.05; % inner radius (m)
+Li = 0.10; % inner length (m)
+Ni = 10; % number of turns
+% Outer solenoid geometry
+Ro = 0.10; % outer radius (m)
+Lo = 0.10; % outer length (m)
+No = 10; % number of turns
+% Numerical settings
+Nseg = 100; % segments used to approximate each circular loop
+Nr = 40; % radial sample points
+Nz = 40; % axial sample points
+% Observation grid in r-z plane
+r_vals = linspace(0, Ro*1.2, Nr); % from axis outwards
+z_vals = linspace(-Lo/1.5, Lo/1.5, Nz); % slightly longer than solenoids
+% Storage arrays for Br and Bz at each grid point
+Br_map = zeros(Nz,Nr);
+Bz_map = zeros(Nz,Nr);
+% Anonymous function that calls the Biot-Savart loop function
+loopField = @(R_loop, z_loop, r_obs) ...
+biotSavartLoop(mu0, I, R_loop, z_loop, r_obs, Nseg);
+% Precompute z positions of each turn
+z_inner = linspace(-Li/2, Li/2, Ni);
+z_outer = linspace(-Lo/2, Lo/2, No);
+
+% Loop over observation points
+
+for iz = 1:Nz
+  for ir = 1:Nr
+% Observation point in Cartesian coordinates (x,y,z)
+     r_obs = [ r_vals(ir), 0, z_vals(iz) ];
+     B_total = [0 0 0];
+     for z0 = z_inner
+        B_total = B_total + loopField(Ri, z0, r_obs);
+     end
+     for z0 = z_outer
+        B_total = B_total + loopField(Ro, z0, r_obs);
+     end
+% Convert to cylindrical components:
+% in this plane, Br = Bx, Bz = Bz
+     Br_map(iz, ir) = B_total(1);
+     Bz_map(iz, ir) = B_total(3);
+  end
+end
+
+% Plot vector field
+
+figure;
+quiver(r_vals, z_vals, Br_map, Bz_map, 2);
+xlabel('Radius r (m)');
+ylabel('Axial z (m)');
+title('Magnetic field between coaxial solenoids');
+axis equal; grid on;
+
+% Plot magnitude as a heat map
+Bmag = sqrt(Br_map.^2 + Bz_map.^2);
+figure;
+imagesc(r_vals, z_vals, Bmag);
+set(gca,'YDir','normal');
+colorbar;
+xlabel('Radius r (m)');
+ylabel('Axial z (m)');
+title('Magnetic field magnitude |B| (T)');
+colormap turbo;
